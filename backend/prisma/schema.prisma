@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERADOR
+  CLIENTE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CLIENTE)
+  phone     String?
+  asaasId   String?  // ID do cliente no Asaas (ex: cus_00001)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions  Session[]
+  passagens Passagem[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model Embarcacao {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  capacidade  Int
+  descricao   String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  embarques Embarque[]
+}
+
+model Rota {
+  id        Int      @id @default(autoincrement())
+  origem    String
+  destino   String
+  duracao   Int
+  distancia Float?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  embarques Embarque[]
+}
+
+model Embarque {
+  id           Int      @id @default(autoincrement())
+  embarcacaoId Int
+  rotaId       Int
+  dataHora     DateTime
+  preco        Float
+  assentosDisp Int
+  status       String   @default("AGENDADO")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  embarcacao Embarcacao @relation(fields: [embarcacaoId], references: [id])
+  rota       Rota       @relation(fields: [rotaId], references: [id])
+  passagens  Passagem[]
+
+  @@index([dataHora])
+  @@index([status])
+}
+
+model Passageiro {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  cpf       String   @unique
+  telefone  String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  passagens Passagem[]
+}
+
+model Passagem {
+  id             Int      @id @default(autoincrement())
+  embarqueId     Int
+  passageiroId   Int
+  userId         Int?
+  assento        String?
+  status         String   @default("CONFIRMADA")
+  valorPago      Float
+  formaPagamento String   @default("PIX")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  embarque   Embarque   @relation(fields: [embarqueId], references: [id])
+  passageiro Passageiro @relation(fields: [passageiroId], references: [id])
+  user       User?      @relation(fields: [userId], references: [id])
+
+  @@index([embarqueId])
+  @@index([passageiroId])
+}
